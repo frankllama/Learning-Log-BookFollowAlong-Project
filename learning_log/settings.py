@@ -10,7 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+import os
+
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u*5cxuj-!ulu&nszgzzfwm1+602)f7v2e6#urcjv94%elho&ih'
+SECRET_KEY = str(os.getenv('SECRET_KEY'))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -132,3 +136,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # My settings
 LOGIN_URL = 'users:login'
+
+# Platform.sh settings.
+from platformshconfig import Config
+
+config = Config()
+if config.is_valid_platform():
+    ALLOWED_HOSTS.append('.platformsh.site')
+    DEBUG = False
+
+    if config.appDir:
+        STATIC_ROOT = Path(config.appDir) / 'static'
+    if config.projectEntropy:
+        SECRET_KEY = config.projectEntropy
+
+    if not config.in_build():
+        db_settings = config.credentials('database')
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': db_settings['path'],
+                'USER': db_settings['username'],
+                'PASSWORD': db_settings['password'],
+                'HOST': db_settings['host'],
+                'PORT': db_settings['port'],
+            },
+        }
